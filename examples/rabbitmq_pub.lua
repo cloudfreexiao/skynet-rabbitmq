@@ -10,23 +10,28 @@ local skynet = require "skynet"
 local cjson = require "cjson"
 local rabbitmq = require "rabbitmq.rabbitmqstomp"
 
+return function()
+    skynet.timeout(
+        10 * 100,
+        function()
+            local mq =
+                rabbitmq.connect(
+                {host = "127.0.0.1", port = 61613},
+                {username = "guest", password = "guest", vhost = "/"}
+            )
 
-return function ()
-    skynet.timeout(10 * 100, function ()
-        local mq = rabbitmq.connect({host = "127.0.0.1", port = 61613}, 
-        { username = "guest", password = "guest", vhost = "/" } ) 
-    
-        local msg = {key="value1", key2="value2"}
-        local headers = {}
-        headers["destination"] = "/exchange/test"
-        headers["receipt"] = "msg#1"
-        headers["app-id"] = "skynet_rabbitmq"
-        headers["persistent"] = "true"
-        headers["content-type"] = "application/json"
+            local msg = {key = "value1", key2 = "value2"}
+            local headers = {}
+            headers["destination"] = "/exchange/test"
+            headers["receipt"] = "msg#1"
+            headers["app-id"] = "skynet_rabbitmq"
+            headers["persistent"] = "true"
+            headers["content-type"] = "application/json"
 
-        local res = mq:send(cjson.encode(msg), headers)
-        skynet.error("published:", res)
-    
-        mq:close()
-    end)
+            local res = mq:send(cjson.encode(msg), headers)
+            skynet.error("published:", res)
+
+            mq:close()
+        end
+    )
 end

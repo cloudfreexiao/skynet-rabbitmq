@@ -2,12 +2,8 @@
 -- Copyright (C) 2013 Rohit 'bhaisaab' Yadav, Wingify
 -- Opensourced at Wingify in New Delhi under the MIT License
 
-
-local byte = string.byte
 local concat = table.concat
-local error = error
 local find = string.find
-local gsub = string.gsub
 local insert = table.insert
 local len = string.len
 local pairs = pairs
@@ -15,21 +11,18 @@ local setmetatable = setmetatable
 local sub = string.sub
 
 local skynet = require "skynet"
-local socketchannel =  require "skynet.socketchannel"
-
+local socketchannel = require "skynet.socketchannel"
 
 local _M = {
-    _VERSION = "0.1",
+    _VERSION = "0.1"
 }
 _M.__index = _M
 
-local mt = { __index = _M }
-
+local mt = {__index = _M}
 
 local LF = "\x0a"
 local EOL = "\x0d\x0a"
 local NULL_BYTE = "\x00"
-
 
 function _M:_build_frame(command, headers, body)
     local frame = {command, EOL}
@@ -57,8 +50,8 @@ function _M:_build_frame(command, headers, body)
 end
 
 local function __dispatch_resp(self)
-    return function (sock)
-        local frame = nil
+    return function(sock)
+        local frame
         if self.opts.trailing_lf == nil or self.opts.trailing_lf == true then
             frame = sock:readline(NULL_BYTE .. LF)
         else
@@ -70,7 +63,7 @@ local function __dispatch_resp(self)
         end
 
         -- We successfully received a frame, but it was an ERROR frame
-        if sub(frame, 1, len('ERROR') ) == 'ERROR' then
+        if sub(frame, 1, len("ERROR")) == "ERROR" then
             skynet.error("rabbitmq error:", frame)
         end
         skynet.error("resp frame:", frame)
@@ -90,7 +83,7 @@ local function rabbitmq_login(self)
         headers["login"] = self.opts.username
         headers["passcode"] = self.opts.password
         headers["host"] = self.opts.vhost
-    
+
         return self:_send_frame(self:_build_frame("CONNECT", headers, nil))
     end
 end
@@ -99,19 +92,20 @@ function _M.connect(conf, opts)
     if opts == nil then
         opts = {username = "guest", password = "guest", vhost = "/", trailing_lf = true}
     end
-    
+
     local obj = {
-        opts = opts,
+        opts = opts
     }
 
-    obj.__sock = socketchannel.channel {
+    obj.__sock =
+        socketchannel.channel {
         auth = rabbitmq_login(obj),
         host = conf.host or "127.0.0.1",
         port = conf.port or 61613,
         nodelay = true,
-        overload = conf.overload,
+        overload = conf.overload
     }
-    
+
     setmetatable(obj, _M)
     obj.__sock:connect(true)
     return obj
@@ -126,7 +120,7 @@ function _M:send(smsg, headers)
 end
 
 function _M:subscribe(headers, cb)
-    self.__cb = cb 
+    self.__cb = cb
     return self:_send_frame(self:_build_frame("SUBSCRIBE", headers))
 end
 
@@ -144,7 +138,7 @@ function _M:receive()
         if not data then
             return nil, err
         end
-        
+
         local idx = find(data, "\n\n", 2)
         self.__cb(sub(data, idx + 2))
     end
@@ -161,6 +155,5 @@ function _M:close()
     self.__sock:close()
     setmetatable(self, nil)
 end
-
 
 return _M
